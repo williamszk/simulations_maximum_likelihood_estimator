@@ -255,9 +255,10 @@ k = length(x)
 #no correlation between the variables, and standar deviation as 1
 Sigma = diag(rep(1,k), nrow=k)  #covariance matrix
 #Sigma = diag(c(1,2), nrow=k)   #covariance matrix
+#Sigma = matrix(c(1,.4,.4,1),nrow=2) #covariance matrix
 mu = matrix(c(0,0))
 f = function(x){
-  -1 * (2*pi)^(-k/2)*det(Sigma)^(.5)*exp(-.5*t(x-mu)%*%solve(Sigma)%*%(x-mu))
+  -1* (2*pi)^(-k/2)*det(Sigma)^(.5)*exp(-.5*t(x-mu)%*%solve(Sigma)%*%(x-mu))
 }
 f(x)
 
@@ -283,33 +284,33 @@ surface3d(x1_1, x2_1, z, color='red',back = "lines")
 
 #build algorithm
 
-optimizer_NM_multivariate = function(function_evaluate) {
-  f = function_evaluate #function to be evaluated
+optimizer_NM_multivariate = function(f) {
   alpha = 1 
   gamma = 2
   rho = .5
-  tolerance = 0.001 #tolerance epsolon
-  range1 = 50
+  tolerance = 1e-10 #tolerance epsolon
+  range1 = 2
   
   x1 = matrix(runif(k,-range1,range1))#an initial x
-  
   aux_matrix1 = x1+rnorm(k)
   for (kk in 1:(k-1)) { #create matrix of triangulation points
     aux_matrix1 = cbind(aux_matrix1,x1+rnorm(k))
   }
-  matrix_x1 = cbind(x1,aux_matrix1)
-  
-  f_values = double()
-  for (kk in 1:(k+1)) { #create auxiliary vector 
-    f_values[kk] = as.numeric(f(matrix_x1[,kk]))
-  }
-  
-  matrix_x2 = matrix_x1[,order(f_values)] #colocar vetores em ordem
-  x = matrix_x2
-  
+  x = cbind(x1,aux_matrix1)
+
   steps = 1
   craker=0
   while(craker==0){
+    #order the vectors
+    
+    f_values = double()
+    for (kk in 1:(k+1)) { #create auxiliary vector 
+      f_values[kk] = as.numeric(f(x[,kk]))
+    }
+    aux_order1 = order(f_values)
+    matrix_x2 = x[,aux_order1] #colocar vetores em ordem
+    x = matrix_x2
+    
     #calculate the centroid of the problem x0
     aux_centroid = double()
     for (kk in 1:k) {
@@ -318,45 +319,48 @@ optimizer_NM_multivariate = function(function_evaluate) {
     x0 = matrix(aux_centroid)
     
     #compute the reflected point
-    xr = x0 + alpha * (x0 - x2  )
+    xr = x0 + alpha * (x0 - x[,k+1])
     
-    value2 = f(xr) <= f(x1) #; value2
-    value4 = f(x1)<=f(x1) #; value4
+    value1 = f(x[,1]) <= f(xr)  & f(xr) <= f(x[,k]) #reflected point is between the best and worst
+    value2 = f(xr) <= f(x[,1]) #reflected point is the best
+    value3 = f(x[,k]) <= f(xr) 
     
+    if (value1) {
+      x[,k+1] = xr
+    }
     if (value2) { #if reflected point is better than x1, which is the best point
       #compute the expanded point
-      xe = x1 + gamma * (xr - x1)
+      xe = x0 + gamma * (xr - x0)
       value2_1 = f(xe) <= f(xr) #; value2_1
       value2_2 = f(xe) > f(xr) #; value2_2
       if (value2_1) {
-        x2 = xe
+        x[,k+1] = xe
       }
       if (value2_2) {
-        x2 = xr
+        x[,k+1] = xr
       }
     }  
-    if(value4){ #if  f(x1)<=f(x1)
-      #calculate contracted point xc
-      xc = x1 + rho*(x2-x1)
-      value4_1 = f(xc)<f(x2) #; value4_1
-      if (value4_1) {
-        x2 = xc
+    if(value3){ #if  f(x1)<f(xr)
+      xc = x0 + rho*(x[,k+1]-x0) #calculate contracted point xc
+      value3_1 = f(xc)<f(x[,k+1]) # contracted point is the best now
+      if (value3_1) {
+        x[,k+1] = xc
       }
     }
-    
-    value5 = abs(f(x1)-f(x2)) #; value5
+    value5 = abs(f(x[,1])-f(x[,2])) #; value5
     value5_bool = value5 < tolerance #; value5_bool
     if (value5_bool) {
       craker = 1
     }
     steps = steps + 1
+    #print(as.numeric(f(x[,1]))  )
   }
-  aux_df1 = data.frame(x1, f(x1),steps)
-  names(aux_df1) = c('optimal x','lowest value','number of steps')
-  aux_df1
+  output = list(x[,1],f(x[,1]),steps)
+  names(output) = c('optimal x','lowest value','steps')
+  output
 }
 
-
+optimizer_NM_multivariate(f) #test the optimizer function
 
 
 
