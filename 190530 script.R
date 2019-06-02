@@ -6,25 +6,8 @@
 #Multivariate Gaussian distributions
 #https://www.youtube.com/watch?v=eho8xH3E6mE
 
+
 #objective: simulate data and estimate using maximum likelihood
-
-#simulate numerical optimization --------------------------------------
-#by hand, do not use functions nor packages.
-
-#Nelder Mead
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #univariate estimation ---------------------------------------------
 n = 30 #number of observations
